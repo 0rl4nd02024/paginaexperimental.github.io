@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador de NOTAMs Aeroportuarios - Dark Theme</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #fff8dc; /* Cambio a color amarillo crema */
+            background-color: #121212;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #ffd700; /* Amarillo más brillante para los encabezados */
+        }
+        .airport-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .airport-input input {
+            flex-grow: 1;
+            padding: 10px;
+            background-color: #333;
+            border: 1px solid #555;
+            color: #fff8dc; /* Amarillo crema para el texto de entrada */
+            border-radius: 4px;
+        }
+        .airport-input button {
+            padding: 10px 20px;
+            background-color: #3700b3;
+            color: #fff8dc; /* Amarillo crema para el texto del botón */
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .airport-input button:hover {
+            background-color: #5900b3;
+        }
+        .airport-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .airport-card {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .airport-card h2 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .airport-card h2 button {
+            background-color: #cf6679;
+            color: #121212;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.8em;
+            transition: background-color 0.3s;
+        }
+        .airport-card h2 button:hover {
+            background-color: #ff4081;
+        }
+        .notam-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 15px;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+        .notam-table th, .notam-table td {
+            border: 1px solid #333;
+            padding: 12px;
+            text-align: left;
+        }
+        .notam-table th {
+            background-color: #2c2c2c;
+            color: #ffd700; /* Amarillo más brillante para los encabezados de la tabla */
+        }
+        .notam-table tr:nth-child(even) {
+            background-color: #1a1a1a;
+        }
+        .notam-table tr:hover {
+            background-color: #2a2a2a;
+        }
+        .notam-table tr.new-notam {
+            background-color: #5c0000;
+        }
+        .notam-table tr.new-notam:nth-child(even) {
+            background-color: #4c0000;
+        }
+        .notam-table tr.new-notam:hover {
+            background-color: #6c0000;
+        }
+        #updateStatus {
+            margin-top: 20px;
+            font-style: italic;
+            color: #ffd700; /* Amarillo más brillante para el estado de actualización */
+        }
+    </style>
+</head>
+<body>
+    <h1>Analizador de NOTAMs Aeroportuarios</h1>
+    
+    <div class="airport-input">
+        <input type="text" id="airportInput" placeholder="Ingrese código OACI (ej. SCEL, SPZO)">
+        <button onclick="addAirport()">Agregar Aeropuerto</button>
+    </div>
+
+    <div class="airport-results" id="airportResults"></div>
+
+    <div id="updateStatus"></div>
+
+    <script>
+        const airports = [];
+        const maxAirports = 5;
+        let currentNOTAMs = {};
+        let isInitialLoad = true;
+
+        function addAirport() {
+            const input = document.getElementById('airportInput');
+            const code = input.value.trim().toUpperCase();
+            
+            if (code && airports.length < maxAirports && !airports.includes(code)) {
+                airports.push(code);
+                currentNOTAMs[code] = [];
+                updateAirports();
+                input.value = '';
+            } else if (airports.length >= maxAirports) {
+                alert('Máximo de 5 aeropuertos alcanzado. Elimine uno para agregar otro.');
+            } else if (airports.includes(code)) {
+                alert('Este aeropuerto ya ha sido agregado.');
+            }
+        }
+
+        function removeAirport(code) {
+            const index = airports.indexOf(code);
+            if (index > -1) {
+                airports.splice(index, 1);
+                delete currentNOTAMs[code];
+                updateAirports();
+            }
+        }
+
+        function updateAirports() {
+            const resultsDiv = document.getElementById('airportResults');
+            resultsDiv.innerHTML = '';
+
+            airports.forEach(code => {
+                const airportCard = document.createElement('div');
+                airportCard.className = 'airport-card';
+                airportCard.innerHTML = `
+                    <h2>${code} <button onclick="removeAirport('${code}')">Eliminar</button></h2>
+                    <div id="notams-${code}">Cargando NOTAMs...</div>
+                `;
+                resultsDiv.appendChild(airportCard);
+                fetchNOTAMs(code);
+            });
+        }
+
+        function fetchNOTAMs(code) {
+            // Simulación de la obtención de NOTAMs
+            // En una implementación real, aquí se haría una llamada a la API
+            setTimeout(() => {
+                const notams = [
+                    { code: 'A1234/21', category: 'PISTA', description: 'Pista 17L/35R cerrada', validity: '10 OCT 2023 - 15 OCT 2023', impact: 'Alto' },
+                    { code: 'B5678/21', category: 'NAV', description: 'ILS RWY 17L fuera de servicio', validity: '12 OCT 2023 - 14 OCT 2023', impact: 'Medio' }
+                ];
+                
+                // Simular un nuevo NOTAM cada vez que se actualiza (excepto en la carga inicial)
+                if (!isInitialLoad && Math.random() > 0.5) {
+                    notams.push({ 
+                        code: 'C' + Math.floor(Math.random() * 10000) + '/21', 
+                        category: 'METEO', 
+                        description: 'Tormentas eléctricas en las proximidades', 
+                        validity: '15 OCT 2023 - 16 OCT 2023', 
+                        impact: 'Medio' 
+                    });
+                }
+                
+                displayNOTAMs(code, notams);
+            }, 1000);
+        }
+
+        function displayNOTAMs(code, notams) {
+            const notamsDiv = document.getElementById(`notams-${code}`);
+            if (notams.length === 0) {
+                notamsDiv.innerHTML = 'No hay NOTAMs activos para este aeropuerto.';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="notam-table">
+                    <tr>
+                        <th>Código NOTAM</th>
+                        <th>Categoría</th>
+                        <th>Descripción</th>
+                        <th>Vigencia</th>
+                        <th>Impacto</th>
+                    </tr>
+            `;
+
+            notams.forEach(notam => {
+                const isNew = !isInitialLoad && !currentNOTAMs[code].some(n => n.code === notam.code);
+                tableHTML += `
+                    <tr class="${isNew ? 'new-notam' : ''}">
+                        <td>${notam.code}</td>
+                        <td>${notam.category}</td>
+                        <td>${notam.description}</td>
+                        <td>${notam.validity}</td>
+                        <td>${notam.impact}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</table>';
+            notamsDiv.innerHTML = tableHTML;
+            
+            currentNOTAMs[code] = notams;
+        }
+
+        function updateAll() {
+            airports.forEach(fetchNOTAMs);
+            const now = new Date();
+            document.getElementById('updateStatus').textContent = `Última actualización: ${now.toUTCString()}`;
+            isInitialLoad = false;
+        }
+
+        // Actualizar cada 5 minutos
+        setInterval(updateAll, 300000);
+
+        // Actualización inicial
+        updateAll();
+    </script>
+</body>
+</html>
